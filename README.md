@@ -27,7 +27,35 @@ A comprehensive platform connecting esports players with professional coaches fo
 
 ## Quick Start
 
-### Local Development
+### **Cross-Platform Support** 🌐
+Choose your operating system:
+
+#### **Linux/Mac** 🐧🍎
+```bash
+# Setup everything
+./scripts/setup-local-dev.sh
+
+# Start development
+./scripts/start-dev.sh
+
+# Test everything  
+./scripts/smoke-tests.sh
+```
+
+#### **Windows** 🪟
+```batch
+# Command Prompt
+scripts\setup-local-dev.bat
+scripts\start-dev.bat
+scripts\smoke-tests.bat
+
+# PowerShell (Recommended)
+.\scripts\setup-local-dev.ps1
+.\scripts\start-dev.ps1  
+.\scripts\smoke-tests.ps1
+```
+
+### **Local Development**
 ```bash
 # Start local development environment
 cd local-dev
@@ -39,7 +67,7 @@ docker-compose up -d
 # - Grafana: http://localhost:3001
 ```
 
-### Production Deployment
+### **Production Deployment**
 ```bash
 # Deploy to Kubernetes
 cd kubernetes
