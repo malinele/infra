@@ -343,6 +343,105 @@ services:
       timeout: 10s
       retries: 3
 
+  messaging-service:
+    build:
+      context: ./services/messaging-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-messaging-service
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=development
+      - PORT=3006
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/messaging-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3006/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ratings-service:
+    build:
+      context: ./services/ratings-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-ratings-service
+    ports:
+      - "3008:3008"
+    environment:
+      - NODE_ENV=development
+      - PORT=3008
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/ratings-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3008/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  search-service:
+    build:
+      context: ./services/search-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-search-service
+    ports:
+      - "3009:3009"
+    environment:
+      - NODE_ENV=development
+      - PORT=3009
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./services/search-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3009/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   postgres_data:
     driver: local
