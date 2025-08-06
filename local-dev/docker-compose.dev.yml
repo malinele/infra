@@ -1,10 +1,13 @@
 # Development services extension
-# This file adds the missing services to the main docker-compose.yml
-version: '3.8'
+# This file should be used together with the main docker-compose.yml
+# Run with: docker-compose -f ../docker-compose.yml -f docker-compose.dev.yml up
+# OR: just use the main docker-compose.yml which now includes all services
 
 services:
-  # Add missing services to the development setup
-  messaging-service:
+  # Additional development overrides (all services are now in main compose file)
+  
+  # Override API Gateway for development
+  api-gateway:
     build:
       context: ../services/messaging-service
       dockerfile: Dockerfile.dev
