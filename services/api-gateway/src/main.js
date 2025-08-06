@@ -78,6 +78,38 @@ app.use('/api/search', (req, res) => {
   res.json({ message: `Proxying to ${services.search}${req.path}`, method: req.method });
 });
 
+// Health check endpoint that checks all services
+app.get('/api/health', async (req, res) => {
+  const healthChecks = {};
+  
+  // Check each service health
+  for (const [serviceName, serviceUrl] of Object.entries(services)) {
+    try {
+      // In a real implementation, you'd make HTTP requests to each service
+      // For now, we'll just return a mock response
+      healthChecks[serviceName] = {
+        status: 'healthy',
+        url: serviceUrl,
+        responseTime: Math.floor(Math.random() * 50) + 10 // Mock response time
+      };
+    } catch (error) {
+      healthChecks[serviceName] = {
+        status: 'unhealthy',
+        url: serviceUrl,
+        error: error.message
+      };
+    }
+  }
+  
+  const overallHealth = Object.values(healthChecks).every(check => check.status === 'healthy');
+  
+  res.status(overallHealth ? 200 : 503).json({
+    status: overallHealth ? 'healthy' : 'degraded',
+    services: healthChecks,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
