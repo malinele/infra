@@ -128,4 +128,5 @@ INSERT INTO users (id, email, auth_provider_id) VALUES
 INSERT INTO coaches (user_id, display_name, bio, games, hourly_rate, status) VALUES
     ('550e8400-e29b-41d4-a716-446655440001', 'Pro Coach', 'Professional esports coach with 5+ years experience', ARRAY['League of Legends', 'Counter-Strike'], 50.00, 'verified');
 
-PRINT 'Database initialized successfully';
+-- Database initialization completed successfully
+SELECT 'Database initialized successfully' AS initialization_status;
