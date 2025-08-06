@@ -1,121 +1,112 @@
+# Development services extension
+# This file adds the missing services to the main docker-compose.yml
 version: '3.8'
 
 services:
-  # API Gateway
-  api-gateway:
+  # Add missing services to the development setup
+  messaging-service:
     build:
-      context: ../services/api-gateway
+      context: ../services/messaging-service
       dockerfile: Dockerfile.dev
+    container_name: esport-messaging-service
     ports:
-      - "8080:8080"
+      - "3006:3006"
     environment:
       - NODE_ENV=development
-      - AUTH_SERVICE_URL=http://auth-service:3001
-      - USER_SERVICE_URL=http://user-service:3002
-      - COACH_SERVICE_URL=http://coach-service:3003
-      - SESSION_SERVICE_URL=http://session-service:3004
-      - VIDEO_SERVICE_URL=http://video-service:3005
-      - MESSAGING_SERVICE_URL=http://messaging-service:3006
-      - PAYMENT_SERVICE_URL=http://payment-service:3007
-      - RATINGS_SERVICE_URL=http://ratings-service:3008
-      - SEARCH_SERVICE_URL=http://search-service:3009
-    depends_on:
-      - auth-service
-      - user-service
-    volumes:
-      - ../services/api-gateway:/app
-      - /app/node_modules
-    command: npm run dev
-    networks:
-      - esport-coach-network
-
-  # Microservices
-  auth-service:
-    build:
-      context: ../services/auth-service
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3001:3001"
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=dev-secret-key
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - ../services/auth-service:/app
-      - /app/node_modules
-    command: npm run dev
-    networks:
-      - esport-coach-network
-
-  user-service:
-    build:
-      context: ../services/user-service
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3002:3002"
-    environment:
-      - NODE_ENV=development
+      - PORT=3006
       - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
       - REDIS_URL=redis://redis:6379
       - NATS_URL=nats://nats:4222
     depends_on:
-      - postgres
-      - redis
-      - nats
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
     volumes:
-      - ../services/user-service:/app
-      - /app/node_modules
-    command: npm run dev
+      - ../services/messaging-service:/app
+      - messaging_service_node_modules:/app/node_modules
     networks:
       - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3006/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  coach-service:
+  ratings-service:
     build:
-      context: ../services/coach-service
+      context: ../services/ratings-service
       dockerfile: Dockerfile.dev
+    container_name: esport-ratings-service
     ports:
-      - "3003:3003"
+      - "3008:3008"
     environment:
       - NODE_ENV=development
+      - PORT=3008
       - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
       - REDIS_URL=redis://redis:6379
       - NATS_URL=nats://nats:4222
     depends_on:
-      - postgres
-      - redis
-      - nats
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
     volumes:
-      - ../services/coach-service:/app
-      - /app/node_modules
-    command: npm run dev
+      - ../services/ratings-service:/app
+      - ratings_service_node_modules:/app/node_modules
     networks:
       - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3008/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  session-service:
+  search-service:
     build:
-      context: ../services/session-service
+      context: ../services/search-service
       dockerfile: Dockerfile.dev
+    container_name: esport-search-service
     ports:
-      - "3004:3004"
+      - "3009:3009"
     environment:
       - NODE_ENV=development
+      - PORT=3009
       - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
       - REDIS_URL=redis://redis:6379
       - NATS_URL=nats://nats:4222
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     depends_on:
-      - postgres
-      - redis
-      - nats
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     volumes:
-      - ../services/session-service:/app
-      - /app/node_modules
-    command: npm run dev
+      - ../services/search-service:/app
+      - search_service_node_modules:/app/node_modules
     networks:
       - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3009/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  messaging_service_node_modules:
+  ratings_service_node_modules:
+  search_service_node_modules:
 
 networks:
   esport-coach-network:
