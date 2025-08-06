@@ -461,4 +461,3 @@ volumes:
 networks:
   esport-coach-network:
     driver: bridge
-    name: esport-coach-network
