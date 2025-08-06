@@ -1,4 +1,6 @@
-version: '3.8'
+# Esport Coach Connect - Complete Docker Compose Configuration
+# All services included: Infrastructure + All Microservices
+# Usage: docker-compose up -d OR ./scripts/start-dev.sh
 
 services:
   # Infrastructure Services
