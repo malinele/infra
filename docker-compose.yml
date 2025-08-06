@@ -1,13 +1,15 @@
 version: '3.8'
 
 services:
-  # Databases
+  # Infrastructure Services
   postgres:
     image: postgres:15-alpine
+    container_name: esport-postgres
     environment:
       POSTGRES_DB: esport_coach
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin123
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
@@ -18,25 +20,37 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - esport-coach-network
 
   redis:
     image: redis:7-alpine
+    container_name: esport-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    command: redis-server --appendonly yes --save 900 1 --save 300 10 --save 60 10000
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - esport-coach-network
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: esport-elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     ports:
       - "9200:9200"
     volumes:
@@ -46,23 +60,30 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    networks:
+      - esport-coach-network
 
-  # Message Queue
   nats:
     image: nats:2.10-alpine
+    container_name: esport-nats
     ports:
       - "4222:4222"
       - "8222:8222"
-    command: ["--jetstream", "--http_port", "8222"]
+      - "6222:6222"
+    command: ["--jetstream", "--http_port", "8222", "--port", "4222", "--cluster_name", "esport-coach"]
+    volumes:
+      - nats_data:/data
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8222/varz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - esport-coach-network
 
-  # Object Storage
   minio:
     image: minio/minio:latest
+    container_name: esport-minio
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -77,13 +98,264 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - esport-coach-network
+
+  # Application Services
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile.dev
+    container_name: esport-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - USER_SERVICE_URL=http://user-service:3002
+      - COACH_SERVICE_URL=http://coach-service:3003
+      - SESSION_SERVICE_URL=http://session-service:3004
+      - VIDEO_SERVICE_URL=http://video-service:3005
+      - MESSAGING_SERVICE_URL=http://messaging-service:3006
+      - PAYMENT_SERVICE_URL=http://payment-service:3007
+      - RATINGS_SERVICE_URL=http://ratings-service:3008
+      - SEARCH_SERVICE_URL=http://search-service:3009
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    volumes:
+      - ./services/api-gateway:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev-secret-key-change-in-production
+      - JWT_EXPIRE=24h
+      - REFRESH_TOKEN_EXPIRE=7d
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/auth-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-user-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/user-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  coach-service:
+    build:
+      context: ./services/coach-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-coach-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./services/coach-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  session-service:
+    build:
+      context: ./services/session-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-session-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/session-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  video-service:
+    build:
+      context: ./services/video-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-video-service
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=development
+      - PORT=3005
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=admin123
+      - MINIO_BUCKET=recordings
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./services/video-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3005/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile.dev
+    container_name: esport-payment-service
+    ports:
+      - "3007:3007"
+    environment:
+      - NODE_ENV=development
+      - PORT=3007
+      - DATABASE_URL=postgresql://admin:admin123@postgres:5432/esport_coach
+      - REDIS_URL=redis://redis:6379
+      - NATS_URL=nats://nats:4222
+      - STRIPE_SECRET_KEY=sk_test_change_me
+      - STRIPE_WEBHOOK_SECRET=whsec_change_me
+      - PAYMENT_CURRENCY=USD
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/payment-service:/app
+      - /app/node_modules
+    networks:
+      - esport-coach-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3007/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   elastic_data:
+    driver: local
   minio_data:
+    driver: local
+  nats_data:
+    driver: local
 
 networks:
-  default:
+  esport-coach-network:
+    driver: bridge
     name: esport-coach-network

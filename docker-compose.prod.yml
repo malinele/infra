@@ -1,0 +1,174 @@
+# Production override file
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+version: '3.8'
+
+services:
+  # Production overrides - no volume mounts, optimized builds
+  postgres:
+    restart: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  redis:
+    restart: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+  elasticsearch:
+    restart: always
+    environment:
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+
+  nats:
+    restart: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  minio:
+    restart: always
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+      target: production
+    command: ["npm", "start"]
+    restart: always
+    environment:
+      - NODE_ENV=production
+    volumes: []
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+      target: production
+    command: ["npm", "start"]
+    restart: always
+    environment:
+      - NODE_ENV=production
+    volumes: []
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+      target: production
+    command: ["npm", "start"]
+    restart: always
+    environment:
+      - NODE_ENV=production
+    volumes: []
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  coach-service:
+    build:
+      context: ./services/coach-service
+      dockerfile: Dockerfile
+      target: production
+    command: ["npm", "start"]
+    restart: always
+    environment:
+      - NODE_ENV=production
+    volumes: []
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  session-service:
+    build:
+      context: ./services/session-service
+      dockerfile: Dockerfile
+      target: production
+    command: ["npm", "start"]
+    restart: always
+    environment:
+      - NODE_ENV=production
+    volumes: []
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  video-service:
+    build:
+      context: ./services/video-service
+      dockerfile: Dockerfile
+      target: production
+    command: ["npm", "start"]
+    restart: always
+    environment:
+      - NODE_ENV=production
+    volumes: []
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+      target: production
+    command: ["npm", "start"]
+    restart: always
+    environment:
+      - NODE_ENV=production
+    volumes: []
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'

@@ -1,0 +1,56 @@
+# Override file for local development
+# This file is automatically loaded by docker-compose
+version: '3.8'
+
+services:
+  # Override for development with hot reload
+  api-gateway:
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./services/api-gateway:/app
+      - api_gateway_node_modules:/app/node_modules
+    
+  auth-service:
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./services/auth-service:/app
+      - auth_service_node_modules:/app/node_modules
+    
+  user-service:
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./services/user-service:/app
+      - user_service_node_modules:/app/node_modules
+    
+  coach-service:
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./services/coach-service:/app
+      - coach_service_node_modules:/app/node_modules
+    
+  session-service:
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./services/session-service:/app
+      - session_service_node_modules:/app/node_modules
+    
+  video-service:
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./services/video-service:/app
+      - video_service_node_modules:/app/node_modules
+    
+  payment-service:
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./services/payment-service:/app
+      - payment_service_node_modules:/app/node_modules
+
+volumes:
+  api_gateway_node_modules:
+  auth_service_node_modules:
+  user_service_node_modules:
+  coach_service_node_modules:
+  session_service_node_modules:
+  video_service_node_modules:
+  payment_service_node_modules:
