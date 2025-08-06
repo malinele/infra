@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: esport-coach
+  labels:
+    app.kubernetes.io/name: esport-coach-connect
+    app.kubernetes.io/instance: esport-coach
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/part-of: esport-coach-platform
+    app.kubernetes.io/managed-by: kustomize
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: esport-coach-monitoring
+  labels:
+    app.kubernetes.io/name: esport-coach-monitoring
+    app.kubernetes.io/instance: monitoring
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: esport-coach-platform
+    app.kubernetes.io/managed-by: kustomize

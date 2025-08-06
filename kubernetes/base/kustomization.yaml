@@ -1,0 +1,56 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: esport-coach-base
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - database/
+  - services/
+  - ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/name: esport-coach-connect
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/managed-by: kustomize
+
+# Add common annotations
+commonAnnotations:
+  platform.esportcoach.io/managed-by: "kubernetes"
+  platform.esportcoach.io/version: "1.0.0"
+
+# Resource name prefix
+namePrefix: esport-coach-
+
+# Images (will be overridden in overlays)
+images:
+  - name: api-gateway
+    newName: esportcoach/api-gateway
+    newTag: latest
+  - name: auth-service
+    newName: esportcoach/auth-service
+    newTag: latest
+  - name: user-service
+    newName: esportcoach/user-service
+    newTag: latest
+  - name: coach-service
+    newName: esportcoach/coach-service
+    newTag: latest
+  - name: session-service
+    newName: esportcoach/session-service
+    newTag: latest
+  - name: payment-service
+    newName: esportcoach/payment-service
+    newTag: latest
+
+# ConfigMap generator for environment-specific configs
+configMapGenerator:
+  - name: app-config
+    literals:
+      - APP_NAME=esport-coach-connect
+      - PLATFORM_VERSION=1.0.0
+      - BUILD_INFO=base
