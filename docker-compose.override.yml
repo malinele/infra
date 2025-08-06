@@ -1,7 +1,4 @@
-# Override file for local development
-# This file is automatically loaded by docker-compose
-version: '3.8'
-
+# Development Override - Remove obsolete version
 services:
   # Override for development with hot reload
   api-gateway:
